@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Land Measurement Calculator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:#f5f2eb; --surface:#fff; --border:#d9d3c5;
+  --accent:#2a5c3f; --accent2:#e8b84b; --accent3:#4a7de8;
+  --text:#1a1a18; --muted:#7a7568; --danger:#c0392b;
+  --canvas-bg:#eaf4ec;
+  --font:'Syne',sans-serif; --mono:'DM Mono',monospace;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;flex-direction:column}
+
+header{background:var(--accent);color:#fff;padding:13px 18px;display:flex;align-items:center;gap:11px;flex-shrink:0}
+.logo{width:32px;height:32px;background:var(--accent2);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo svg{width:19px;height:19px;fill:var(--accent)}
+header h1{font-size:16px;font-weight:800;letter-spacing:-.3px}
+header p{font-size:10px;opacity:.7;margin-top:1px}
+
+.app{display:grid;grid-template-columns:350px 1fr;flex:1;min-height:0;overflow:hidden}
+@media(max-width:780px){.app{grid-template-columns:1fr;overflow:visible}}
+
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;max-height:calc(100vh - 58px)}
+.sec{padding:13px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+
+.how-banner{background:#f0f8f3;border:1px solid #c3e0ce;border-radius:7px;padding:9px 11px;font-size:11.5px;color:#1e4530;line-height:1.65}
+.how-banner strong{font-weight:700;color:#15332a}
+.how-banner .step{display:flex;gap:7px;margin-bottom:4px;align-items:flex-start}
+.how-banner .step:last-child{margin-bottom:0}
+.step-num{background:var(--accent);color:#fff;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* TABLE HEADER */
+.sides-header{display:grid;grid-template-columns:52px 1fr 72px 30px 28px;gap:4px;margin-bottom:5px;align-items:center;padding:0 2px}
+.sides-header span{font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+
+.sides-list{display:flex;flex-direction:column;gap:5px}
+
+/* EACH SIDE ROW */
+.side-row{display:grid;grid-template-columns:52px 1fr 72px 30px 28px;gap:4px;align-items:center;padding:4px 2px;border-radius:6px;transition:background .15s}
+.side-row:hover{background:#f8faf8}
+.side-row.active-row{background:#edf7f1;border-left:3px solid var(--accent);margin-left:-3px}
+
+.side-lbl{font-size:11.5px;font-weight:700;color:var(--accent);font-family:var(--mono);white-space:nowrap}
+
+.side-row input[type=number]{width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--bg);color:var(--text);-moz-appearance:textfield}
+.side-row input[type=number]::-webkit-outer-spin-button,
+.side-row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.side-row input:focus{outline:none;border-color:var(--accent);background:#fff}
+.side-row input::placeholder{color:var(--muted)}
+
+.ang-in{width:100%;padding:5px 5px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--bg);color:var(--text);-moz-appearance:textfield}
+.ang-in::-webkit-outer-spin-button,.ang-in::-webkit-inner-spin-button{-webkit-appearance:none}
+.ang-in:focus{outline:none;border-color:var(--accent2);background:#fff}
+.ang-in::placeholder{color:var(--muted)}
+
+.btn-ins{width:28px;height:28px;border:1.5px dashed var(--border);border-radius:5px;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative}
+.btn-ins:hover{background:#f0f8f3;color:var(--accent);border-color:var(--accent)}
+.btn-ins::after{content:'Split';position:absolute;top:-26px;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:9px;padding:2px 5px;border-radius:3px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;font-family:var(--font)}
+.btn-ins:hover::after{opacity:1}
+
+.btn-rem{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.btn-rem:hover{background:#fef0ef;color:var(--danger);border-color:var(--danger)}
+.btn-rem:disabled{opacity:.3;cursor:not-allowed}
+
+.btn-add{width:100%;padding:7px;border:1.5px dashed var(--border);border-radius:6px;background:transparent;color:var(--accent);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:700;margin-top:7px;transition:all .15s}
+.btn-add:hover{background:#f0f8f3;border-color:var(--accent)}
+
+/* CLOSING SIDE */
+.closing-row{display:flex;align-items:center;gap:6px;margin-top:7px;padding:6px 9px;background:#fff8e8;border:1px solid #f0d080;border-radius:6px;font-size:11px;color:#7a5a00}
+.closing-row span{font-family:var(--mono);font-weight:600;color:#5a3f00}
+
+/* MODE STRIP */
+.mode-strip{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:0}
+.mode-btn{flex:1;padding:7px 5px;border:none;background:transparent;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s;border-right:1px solid var(--border)}
+.mode-btn:last-child{border-right:none}
+.mode-btn.active{background:var(--accent);color:#fff}
+.mode-btn:hover:not(.active){background:var(--bg)}
+
+/* DIAGONAL */
+.diag-sel-row{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.diag-sel-row select{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:11.5px;background:var(--bg);color:var(--text)}
+.diag-sel-row select:focus{outline:none;border-color:var(--accent3)}
+.diag-sel-row .arrow{font-size:13px;color:var(--muted);flex-shrink:0}
+.diag-list{display:flex;flex-direction:column;gap:4px}
+.diag-row{display:flex;align-items:center;gap:6px;padding:5px 9px;background:var(--bg);border-radius:6px;border:1px solid var(--border);font-size:11.5px}
+.diag-lbl{font-family:var(--mono);font-weight:700;color:var(--accent3);flex:1}
+.diag-len{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+
+/* UNITS */
+.unit-toggle{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.unit-btn{flex:1;padding:7px;border:none;background:transparent;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s}
+.unit-btn.active{background:var(--accent);color:#fff}
+.unit-btn:hover:not(.active){background:var(--bg)}
+.conv-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:8px}
+.conv-row label{font-size:11.5px;color:var(--muted);flex:1}
+.conv-val{width:80px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--bg);text-align:right;-moz-appearance:textfield}
+.conv-val::-webkit-outer-spin-button,.conv-val::-webkit-inner-spin-button{-webkit-appearance:none}
+.conv-val:focus{outline:none;border-color:var(--accent)}
+
+/* BUTTONS */
+.btn{width:100%;padding:9px 13px;border-radius:var(--r);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#1e4530}
+.btn-secondary{background:var(--accent2);color:var(--accent)}.btn-secondary:hover{background:#d9a83a}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-outline:hover{background:var(--bg);color:var(--text)}
+.btn-blue{background:var(--accent3);color:#fff;border:none}.btn-blue:hover{background:#3568cc}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.actions{display:flex;flex-direction:column;gap:6px}
+
+/* RESULTS */
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px}
+.rcard{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;text-align:center}
+.rcard .v{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--accent);display:block}
+.rcard .u{font-size:9px;color:var(--muted);margin-top:1px}
+.rcard.wide{grid-column:1/-1}.rcard.wide .v{font-size:19px}
+.rcard.land{background:#fff8e8;border-color:#f0d080}.rcard.land .v{color:#7a5a00}
+.perim-row{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 11px;display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:5px}
+.perim-row strong{font-family:var(--mono);color:var(--accent)}
+
+/* ANGLES CHIPS */
+.angles-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.achip{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.achip strong{color:#534ab7}
+
+/* DISPLAY OPTIONS */
+.opt-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px}
+.toggle{width:32px;height:18px;background:var(--border);border-radius:9px;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s}
+.toggle.on::after{left:17px}
+
+/* SAVE/LOAD */
+.save-row{display:flex;gap:6px}
+.save-row input{flex:1;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:11px;background:var(--bg);color:var(--text)}
+.save-row input:focus{outline:none;border-color:var(--accent)}
+.save-row .btn{width:auto;padding:6px 10px;font-size:11px}
+.saved-list{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+.saved-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--bg);border-radius:5px;border:1px solid var(--border);font-size:11px;gap:4px}
+.saved-item .sname{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-item .sdate{font-size:9px;color:var(--muted);flex-shrink:0}
+.sia{display:flex;gap:4px;flex-shrink:0}
+.sia button{background:transparent;border:none;cursor:pointer;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+.sia .lb{color:var(--accent);background:#e8f5ee}
+.sia .lb:hover{background:#cde9d8}
+.sia .db{color:var(--danger);background:#fef0ef}
+.sia .db:hover{background:#fcdad7}
+
+/* AUTOSAVE DOT */
+.asdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ccc;margin-left:5px;vertical-align:middle;transition:background .4s}
+.asdot.saving{background:var(--accent2)}
+.asdot.saved{background:#27ae60}
+
+/* CANVAS */
+.canvas-area{display:flex;flex-direction:column;background:var(--canvas-bg);min-height:420px;overflow:hidden}
+.canvas-toolbar{display:flex;align-items:center;gap:6px;padding:7px 11px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.canvas-toolbar .btn{width:auto;padding:5px 10px;font-size:11px}
+.mode-pill{background:var(--accent3);color:#fff;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;display:none}
+.mode-pill.show{display:block}
+.chint{font-size:11px;color:var(--muted);margin-left:auto}
+canvas{flex:1;display:block;cursor:default;touch-action:none}
+canvas.can-drag{cursor:grab}
+canvas.dragging{cursor:grabbing}
+canvas.seg-hover{cursor:cell}
+canvas.diag-mode{cursor:crosshair}
+.info-bar{padding:5px 11px;background:rgba(255,255,255,.7);border-top:1px solid var(--border);font-size:10.5px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.info-bar strong{color:var(--accent)}
+
+/* TOAST */
+.toast{position:fixed;bottom:16px;right:16px;background:var(--text);color:#fff;padding:8px 14px;border-radius:7px;font-size:11px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999}
+.toast.show{opacity:1}
+.toast.ok{background:#27ae60}
+.toast.warn{background:#d97706}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:1000}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;width:300px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:15px;font-weight:800;margin-bottom:6px}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:14px}
+.modal input{width:100%;padding:9px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--mono);font-size:18px;letter-spacing:6px;text-align:center;background:var(--bg);margin-bottom:8px}
+.modal input:focus{outline:none;border-color:var(--accent)}
+.modal .err{font-size:11px;color:var(--danger);min-height:16px;margin-bottom:10px}
+.modal .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M3 17l4-8 4 5 3-4 4 7H3z"/></svg>
+  </div>
+  <div>
+    <h1>Land Measurement Calculator</h1>
+    <p>Unlimited points · Inch/Kari · Diagonals · Dhur/Katha · Auto-save projects</p>
+  </div>
+</header>
+
+<div class="app">
+<aside class="sidebar">
+
+  <!-- HOW TO USE -->
+  <div class="sec">
+    <div class="sec-title">How to Use</div>
+    <div class="how-banner">
+      <div class="step"><div class="step-num">1</div><div>Enter side lengths &amp; turn angles, then click <strong>Draw Land</strong>. Or use <strong>Click-Add</strong> mode to place points directly on the canvas.</div></div>
+      <div class="step"><div class="step-num">2</div><div>Click <strong>＋</strong> on any row or click a segment line to <strong>split it</strong> and insert a new point.</div></div>
+      <div class="step"><div class="step-num">3</div><div>Use <strong>Diagonal</strong> mode — click two points to measure cross-distances like D→I.</div></div>
+      <div class="step"><div class="step-num">4</div><div>Set unit to <strong>Inch or Kari</strong>, edit conversion ratios, and data auto-saves every change.</div></div>
+    </div>
+  </div>
+
+  <!-- MODE -->
+  <div class="sec">
+    <div class="sec-title">Canvas Mode</div>
+    <div class="mode-strip">
+      <button class="mode-btn active" id="modeNormal" onclick="setMode('normal')">✏️ Draw</button>
+      <button class="mode-btn" id="modeDiag" onclick="setMode('diagonal')">📐 Diagonal</button>
+      <button class="mode-btn" id="modeClick" onclick="setMode('click')">➕ Click-Add</button>
+    </div>
+  </div>
+
+  <!-- SIDES -->
+  <div class="sec">
+    <div class="sec-title">Side Lengths &amp; Angles <span class="asdot" id="asdot"></span></div>
+    <div class="sides-header">
+      <span>Side</span>
+      <span>Length</span>
+      <span>Turn (°)</span>
+      <span style="text-align:center">Split</span>
+      <span></span>
+    </div>
+    <div class="sides-list" id="sidesList"></div>
+    <div class="closing-row" id="closingRow" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7" stroke-dasharray="4 2"/></svg>
+      Closes <strong id="closingLabel">Z→A</strong>: <span id="closingLen">—</span>
+    </div>
+    <button class="btn-add" id="btnAddSide">+ Add Next Point</button>
+  </div>
+
+  <!-- ANGLES -->
+  <div class="sec" id="anglesSec" style="display:none">
+    <div class="sec-title">Vertex Angles</div>
+    <div class="angles-wrap" id="anglesWrap"></div>
+  </div>
+
+  <!-- DIAGONALS -->
+  <div class="sec">
+    <div class="sec-title">Diagonals (Point-to-Point)</div>
+    <div class="diag-sel-row">
+      <select id="diagFrom"><option value="">From…</option></select>
+      <span class="arrow">→</span>
+      <select id="diagTo"><option value="">To…</option></select>
+      <button class="btn btn-blue" style="width:auto;padding:6px 11px;font-size:11.5px" onclick="addDiagonal()">Add</button>
+    </div>
+    <div class="diag-list" id="diagList"></div>
+    <div id="diagEmpty" style="font-size:10.5px;color:var(--muted)">No diagonals. Select two points above.</div>
+  </div>
+
+  <!-- UNITS -->
+  <div class="sec">
+    <div class="sec-title">Unit System</div>
+    <div class="unit-toggle">
+      <button class="unit-btn active" id="uInch" onclick="setUnit('inch')">Inch</button>
+      <button class="unit-btn" id="uKari" onclick="setUnit('kari')">Kari</button>
+    </div>
+    <div class="conv-row">
+      <label>1 Kari = <strong id="kariVal">7.92</strong> Inches</label>
+      <input type="number" class="conv-val" id="kariPerInch" value="7.92" step="0.01" min="0.1" title="Edit: Inches per Kari">
+    </div>
+  </div>
+
+  <!-- LAND CONVERSION -->
+  <div class="sec">
+    <div class="sec-title">Land Unit Conversion</div>
+    <div class="conv-row">
+      <label>Kari² per Dhur</label>
+      <input type="number" class="conv-val" id="kariPerDhur" value="20" step="1" min="1">
+    </div>
+    <div class="conv-row">
+      <label>Dhur per Katha</label>
+      <input type="number" class="conv-val" id="dhurPerKatha" value="20" step="1" min="1">
+    </div>
+    <div style="font-size:10px;color:var(--muted)">Edit to match your regional standards.</div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="sec">
+    <div class="sec-title">Actions</div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnDraw">&#9654; Draw Land</button>
+      <button class="btn btn-secondary" id="btnCalc">&#9650; Calculate Area</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="btnExport">&#8681; Export PNG</button>
+        <button class="btn btn-outline" id="btnReset">&#8635; Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="sec">
+    <div class="sec-title">Area Results</div>
+    <div class="result-grid">
+      <div class="rcard"><span class="v" id="resSqm">—</span><div class="u">Square Metres</div></div>
+      <div class="rcard"><span class="v" id="resSqft">—</span><div class="u">Square Feet</div></div>
+      <div class="rcard wide"><span class="v" id="resDispArea">—</span><div class="u" id="resDispUnit">Square Inches</div></div>
+    </div>
+    <div class="result-grid">
+      <div class="rcard land"><span class="v" id="resKari">—</span><div class="u">Kari²</div></div>
+      <div class="rcard land"><span class="v" id="resDhur">—</span><div class="u">Dhur</div></div>
+      <div class="rcard land wide"><span class="v" id="resKatha">—</span><div class="u">Katha</div></div>
+    </div>
+    <div class="perim-row"><span>Total Perimeter</span><strong id="resPerim">—</strong></div>
+  </div>
+
+  <!-- DISPLAY OPTIONS -->
+  <div class="sec">
+    <div class="sec-title">Display Options</div>
+    <div class="opt-row"><span>Show side lengths</span><button class="toggle on" id="togLen"></button></div>
+    <div class="opt-row"><span>Show side names (A→B…)</span><button class="toggle on" id="togNames"></button></div>
+    <div class="opt-row"><span>Show vertex angles</span><button class="toggle" id="togAng"></button></div>
+    <div class="opt-row"><span>Show diagonals</span><button class="toggle on" id="togDiag"></button></div>
+    <div class="opt-row"><span>Show grid</span><button class="toggle" id="togGrid"></button></div>
+    <div class="opt-row"><span>Fill polygon</span><button class="toggle on" id="togFill"></button></div>
+  </div>
+
+  <!-- SAVE/LOAD -->
+  <div class="sec">
+    <div class="sec-title">Projects (Auto-saved)</div>
+    <div class="save-row">
+      <input type="text" id="saveName" placeholder="Project name…">
+      <button class="btn btn-primary" id="btnSave">Save</button>
+    </div>
+    <div class="saved-list" id="savedList"></div>
+  </div>
+
+</aside>
+
+<main class="canvas-area" id="canvasArea">
+  <div class="canvas-toolbar">
+    <button class="btn btn-outline" id="btnZoomIn">+ Zoom</button>
+    <button class="btn btn-outline" id="btnZoomOut">− Zoom</button>
+    <button class="btn btn-outline" id="btnFit">Fit View</button>
+    <span class="mode-pill" id="modePill">📐 DIAGONAL — click 2 points</span>
+    <span class="mode-pill" id="modePillClick" style="background:#27ae60">➕ CLICK-ADD — tap canvas</span>
+    <span class="chint" id="chint">Drag a point to adjust • Click a segment line to insert a point there</span>
+  </div>
+  <canvas id="landCanvas"></canvas>
+  <div class="info-bar">
+    <span>Points: <strong id="infoPts">0</strong></span>
+    <span>Zoom: <strong id="infoZoom">100%</strong></span>
+    <span>Sides: <strong id="infoSides">0</strong></span>
+    <span>Area: <strong id="infoArea">—</strong></span>
+    <span>Mode: <strong id="infoMode">Draw</strong></span>
+  </div>
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Delete passcode modal -->
+<div class="overlay" id="delOverlay">
+  <div class="modal">
+    <h3>🔒 Confirm Delete</h3>
+    <p>Enter passcode to delete project <strong id="delName"></strong></p>
+    <input type="password" id="pcInput" placeholder="••••" maxlength="10" autocomplete="off">
+    <div class="err" id="pcErr"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="closeDelModal()">Cancel</button>
+      <button class="btn btn-primary" style="background:var(--danger)" onclick="confirmDel()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   LAND MEASUREMENT CALCULATOR — FULL FEATURE BUILD
+   Original look preserved + new features added cleanly
+   ══════════════════════════════════════════════════════════════ */
+
+const PASSCODE    = '9016';
+const SQ_FT       = 10.7639;
+const BIGHA_M2    = 1338;
+const PR          = 9;
+const HR          = 18;
+const MIN         = 3;
+const SAVE_KEY    = 'lmc_projects_v2';
+const AUTO_KEY    = 'lmc_autosave_v2';
+
+/* ── NAME GENERATOR (A,B…Z,AA,AB…) ─────────────────────────── */
+function ptName(i) {
+  if (i < 26) return String.fromCharCode(65 + i);
+  return String.fromCharCode(64 + Math.floor(i/26)) + String.fromCharCode(65 + (i%26));
+}
+
+/* ── STATE ────────────────────────────────────────────────────── */
+const state = {
+  sides:      [],   // [{length:string, angle:string}]
+  pts:        [],   // [{x,y}]
+  diagonals:  [],   // [{from:int, to:int}]
+  scale: 20, ox: 80, oy: 80,
+  dragging: null,
+  diagSel: [],      // indices picked in diagonal mode
+  mode: 'normal',   // 'normal' | 'diagonal' | 'click'
+  unit: 'inch',     // 'inch' | 'kari'
+  kariPerInch:  7.92,
+  kariPerDhur:  20,
+  dhurPerKatha: 20,
+  showLen:   true,
+  showNames: true,
+  showAng:   false,
+  showDiag:  true,
+  showGrid:  false,
+  showFill:  true,
+};
+
+const canvas = document.getElementById('landCanvas');
+const ctx    = canvas.getContext('2d');
+
+/* ── POINT NAMING ─────────────────────────────────────────────── */
+/* ── BUILD POINTS ─────────────────────────────────────────────── */
+// Convert user-entered length (in current unit) → metres for internal geometry
+function userLenToMetres(val) {
+  const v = parseFloat(val) || 0;
+  // v is in inches or kari; convert to metres
+  const inches = state.unit === 'inch' ? v : v * state.kariPerInch;
+  return inches / 39.3701;
+}
+
+function buildPts() {
+  const n = state.sides.length;
+  if (n < 2) { state.pts = []; return; }
+  const pts = [];
+  let x = 0, y = 0, heading = 0;
+  for (let i = 0; i < n; i++) {
+    pts.push({ x, y });
+    const lenM = userLenToMetres(state.sides[i].length); // always in metres internally
+    const turn = parseFloat(state.sides[i].angle)  || 0;
+    heading += turn;
+    x += lenM * Math.cos(heading * Math.PI / 180);
+    y += lenM * Math.sin(heading * Math.PI / 180);
+  }
+  state.pts = pts;
+  updateClosingInfo();
+  refreshDiagSelects();
+  refreshAngles();
+}
+
+/* ── CLOSING SIDE ─────────────────────────────────────────────── */
+function closingLen() {
+  const n = state.pts.length;
+  if (n < 2) return 0;
+  return dist(state.pts[0], state.pts[n-1]);
+}
+function updateClosingInfo() {
+  const n = state.pts.length;
+  const row = document.getElementById('closingRow');
+  if (n < 3) { row.style.display='none'; return; }
+  row.style.display='flex';
+  document.getElementById('closingLabel').textContent = ptName(n-1)+'→A';
+  document.getElementById('closingLen').textContent   = fmtLen(closingLen());
+}
+
+/* ── GEOMETRY ─────────────────────────────────────────────────── */
+function dist(a,b){ return Math.sqrt((b.x-a.x)**2+(b.y-a.y)**2); }
+
+function calcArea(pts) {
+  if (pts.length<3) return 0;
+  let s=0; const n=pts.length;
+  for (let i=0;i<n;i++){const j=(i+1)%n;s+=pts[i].x*pts[j].y-pts[j].x*pts[i].y;}
+  return Math.abs(s)/2;
+}
+
+function calcPerim(pts) {
+  let p=0; const n=pts.length;
+  for (let i=0;i<n;i++) p+=dist(pts[i],pts[(i+1)%n]);
+  return p;
+}
+
+function segLen(pts,i){ return dist(pts[i],pts[(i+1)%pts.length]); }
+
+function vertAngle(pts,i) {
+  const n=pts.length;
+  const prev=pts[(i-1+n)%n], cur=pts[i], next=pts[(i+1)%n];
+  const ax=prev.x-cur.x,ay=prev.y-cur.y,bx=next.x-cur.x,by=next.y-cur.y;
+  return Math.atan2(Math.abs(ax*by-ay*bx),ax*bx+ay*by)*180/Math.PI;
+}
+
+/* ── UNIT FORMATTING ──────────────────────────────────────────── */
+function mToDisplay(m) {
+  const inches = m * 39.3701;
+  return state.unit==='inch' ? inches : inches/state.kariPerInch;
+}
+function unitSuffix(){ return state.unit==='inch'?'in':'kari'; }
+function fmtLen(m){ return mToDisplay(m).toFixed(2)+' '+unitSuffix(); }
+
+function areaToKariSq(sqm) {
+  const sqIn = sqm*(39.3701**2);
+  return sqIn/(state.kariPerInch**2);
+}
+
+/* ── SIDE MANAGEMENT ──────────────────────────────────────────── */
+function addSide(afterIdx, length='', angle='0') {
+  const at = afterIdx===undefined ? state.sides.length : afterIdx+1;
+  state.sides.splice(at, 0, {length, angle});
+  buildPts(); renderSidebar(); drawCanvas(); updateResults(); autoSave();
+}
+
+function removeSide(i) {
+  if (state.sides.length<=MIN) { showToast('Need at least '+MIN+' sides','warn'); return; }
+  state.sides.splice(i,1);
+  const n=state.sides.length;
+  state.diagonals=state.diagonals.filter(d=>d.from<n&&d.to<n);
+  buildPts(); renderSidebar(); drawCanvas(); updateResults(); renderDiags(); autoSave();
+}
+
+function splitSide(i) {
+  const orig=state.sides[i];
+  const half=orig.length!==''?(parseFloat(orig.length)/2).toFixed(2):'';
+  state.sides.splice(i,1,
+    {length:half, angle:orig.angle},
+    {length:half, angle:'0'}
+  );
+  buildPts(); renderSidebar(); drawCanvas(); updateResults(); autoSave();
+  showToast('Split: new point after '+ptName(i),'ok');
+}
+
+/* ── DIAGONALS ────────────────────────────────────────────────── */
+function refreshDiagSelects() {
+  const n=state.pts.length;
+  ['diagFrom','diagTo'].forEach(id=>{
+    const sel=document.getElementById(id), cur=sel.value;
+    sel.innerHTML=`<option value="">${id==='diagFrom'?'From…':'To…'}</option>`;
+    for(let i=0;i<n;i++){
+      const o=document.createElement('option');
+      o.value=i; o.textContent=ptName(i);
+      if(String(i)===cur) o.selected=true;
+      sel.appendChild(o);
+    }
+  });
+}
+
+function addDiagonal() {
+  const f=parseInt(document.getElementById('diagFrom').value);
+  const t=parseInt(document.getElementById('diagTo').value);
+  if(isNaN(f)||isNaN(t)){showToast('Select From & To','warn');return;}
+  if(f===t){showToast('Points must differ','warn');return;}
+  const n=state.pts.length;
+  const adj=Math.abs(f-t)===1||(f===0&&t===n-1)||(t===0&&f===n-1);
+  if(adj){showToast('Already a boundary side','warn');return;}
+  if(state.diagonals.some(d=>(d.from===Math.min(f,t)&&d.to===Math.max(f,t)))){
+    showToast('Diagonal already exists','warn');return;
+  }
+  state.diagonals.push({from:Math.min(f,t),to:Math.max(f,t)});
+  renderDiags(); drawCanvas(); autoSave();
+  showToast(`Diagonal ${ptName(f)}→${ptName(t)} added`,'ok');
+}
+
+function removeDiag(i) {
+  state.diagonals.splice(i,1);
+  renderDiags(); drawCanvas(); autoSave();
+}
+
+function renderDiags() {
+  const list=document.getElementById('diagList');
+  const empty=document.getElementById('diagEmpty');
+  list.innerHTML='';
+  if(!state.diagonals.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  state.diagonals.forEach((d,i)=>{
+    const pts=state.pts;
+    if(d.from>=pts.length||d.to>=pts.length) return;
+    const dl=dist(pts[d.from],pts[d.to]);
+    const row=document.createElement('div'); row.className='diag-row';
+    row.innerHTML=`<span class="diag-lbl">${ptName(d.from)}→${ptName(d.to)}</span>
+      <span class="diag-len">${fmtLen(dl)}</span>`;
+    const rm=document.createElement('button');
+    rm.className='btn-rem'; rm.innerHTML='&times;'; rm.onclick=()=>removeDiag(i);
+    row.appendChild(rm); list.appendChild(row);
+  });
+}
+
+/* ── ANGLES ───────────────────────────────────────────────────── */
+function refreshAngles() {
+  const pts=state.pts, n=pts.length;
+  const sec=document.getElementById('anglesSec');
+  const wrap=document.getElementById('anglesWrap');
+  if(n<3){sec.style.display='none';return;}
+  sec.style.display='block'; wrap.innerHTML='';
+  for(let i=0;i<n;i++){
+    const a=vertAngle(pts,i).toFixed(1);
+    const chip=document.createElement('div'); chip.className='achip';
+    chip.innerHTML=`${ptName(i)}: <strong>${a}°</strong>`;
+    wrap.appendChild(chip);
+  }
+}
+
+/* ── UNIT ─────────────────────────────────────────────────────── */
+function setUnit(u) {
+  state.unit=u;
+  document.getElementById('uInch').classList.toggle('active',u==='inch');
+  document.getElementById('uKari').classList.toggle('active',u==='kari');
+  buildPts(); drawCanvas(); updateResults(); renderDiags(); updateClosingInfo(); autoSave();
+}
+document.getElementById('kariPerInch').addEventListener('input',function(){
+  state.kariPerInch=parseFloat(this.value)||7.92;
+  document.getElementById('kariVal').textContent=this.value;
+  buildPts(); drawCanvas(); updateResults(); renderDiags(); updateClosingInfo(); autoSave();
+});
+document.getElementById('kariPerDhur').addEventListener('input',function(){
+  state.kariPerDhur=parseFloat(this.value)||20; updateResults(); autoSave();
+});
+document.getElementById('dhurPerKatha').addEventListener('input',function(){
+  state.dhurPerKatha=parseFloat(this.value)||20; updateResults(); autoSave();
+});
+
+/* ── SIDEBAR RENDER ───────────────────────────────────────────── */
+function renderSidebar() {
+  const list=document.getElementById('sidesList');
+  list.innerHTML='';
+  const n=state.sides.length;
+  state.sides.forEach((side,i)=>{
+    const from=ptName(i), to=ptName(i+1);
+    const row=document.createElement('div'); row.className='side-row'; row.id='srow-'+i;
+    const lbl=document.createElement('div');
+    lbl.className='side-lbl'; lbl.textContent=from+'→'+to;
+    const lenIn=makeNumIn('Length',side.length,v=>{
+      state.sides[i].length=v; buildPts(); drawCanvas(); updateResults(); autoSave();
+    });
+    const angIn=makeNumIn('Turn°',side.angle,v=>{
+      state.sides[i].angle=v; buildPts(); drawCanvas(); updateResults(); autoSave();
+    });
+    angIn.className='ang-in'; angIn.title='Turn at '+from;
+    const spl=document.createElement('button');
+    spl.className='btn-ins'; spl.innerHTML='＋'; spl.title='Split '+from+'→'+to;
+    spl.addEventListener('click',()=>splitSide(i));
+    const rem=document.createElement('button');
+    rem.className='btn-rem'; rem.innerHTML='&times;'; rem.title='Remove '+to;
+    if(n<=MIN) rem.disabled=true;
+    rem.addEventListener('click',()=>removeSide(i));
+    row.append(lbl,lenIn,angIn,spl,rem); list.appendChild(row);
+  });
+  document.getElementById('infoPts').textContent=n;
+  document.getElementById('infoSides').textContent=n;
+  updateClosingInfo();
+}
+
+function makeNumIn(ph,val,cb){
+  const el=document.createElement('input');
+  el.type='number'; el.placeholder=ph; el.step='0.01';
+  if(val!=='') el.value=val;
+  el.addEventListener('input',()=>cb(el.value));
+  return el;
+}
+
+/* ── RESULTS ──────────────────────────────────────────────────── */
+function updateResults(){
+  const pts=state.pts;
+  if(!pts||pts.length<3){clearResults();return;}
+  const sqm=calcArea(pts), sqft=sqm*SQ_FT, perim=calcPerim(pts);
+  document.getElementById('resSqm').textContent  =sqm.toFixed(2);
+  document.getElementById('resSqft').textContent =sqft.toFixed(2);
+  document.getElementById('resPerim').textContent=fmtLen(perim);
+
+  // display area in selected unit
+  if(state.unit==='inch'){
+    const sqIn=sqm*(39.3701**2);
+    document.getElementById('resDispArea').textContent=sqIn.toFixed(2);
+    document.getElementById('resDispUnit').textContent='Square Inches';
+  } else {
+    const kariSq=areaToKariSq(sqm);
+    document.getElementById('resDispArea').textContent=kariSq.toFixed(4);
+    document.getElementById('resDispUnit').textContent='Square Kari';
+  }
+
+  // land units (always kari-based)
+  const kariSq=areaToKariSq(sqm);
+  const dhur=kariSq/state.kariPerDhur;
+  const katha=dhur/state.dhurPerKatha;
+  document.getElementById('resKari').textContent =kariSq.toFixed(3);
+  document.getElementById('resDhur').textContent =dhur.toFixed(4);
+  document.getElementById('resKatha').textContent=katha.toFixed(4);
+  document.getElementById('infoArea').textContent=sqm.toFixed(1)+' m²';
+}
+function clearResults(){
+  ['resSqm','resSqft','resDispArea','resKari','resDhur','resKatha','resPerim']
+    .forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('infoArea').textContent='—';
+}
+
+/* ── COORDS ───────────────────────────────────────────────────── */
+function toCv(mx,my){return{cx:mx*state.scale+state.ox,cy:canvas.height-(my*state.scale+state.oy)};}
+function toMd(cx,cy){return{x:(cx-state.ox)/state.scale,y:(canvas.height-cy-state.oy)/state.scale};}
+
+function resizeCanvas(){
+  const area=document.getElementById('canvasArea');
+  const tb=area.querySelector('.canvas-toolbar');
+  const ib=document.querySelector('.info-bar');
+  canvas.width=area.clientWidth;
+  canvas.height=area.clientHeight-tb.offsetHeight-ib.offsetHeight;
+  drawCanvas();
+}
+
+/* ── DRAW ─────────────────────────────────────────────────────── */
+function drawCanvas(){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#eaf4ec'; ctx.fillRect(0,0,W,H);
+  if(state.showGrid) drawGrid(W,H);
+  drawAxes(W,H);
+  const pts=state.pts;
+  if(!pts||pts.length<1){drawPlaceholder(W,H);return;}
+  const n=pts.length;
+  const cvs=pts.map(p=>toCv(p.x,p.y));
+
+  // Fill
+  if(state.showFill&&n>=3){
+    ctx.beginPath(); ctx.moveTo(cvs[0].cx,cvs[0].cy);
+    for(let i=1;i<n;i++) ctx.lineTo(cvs[i].cx,cvs[i].cy);
+    ctx.closePath(); ctx.fillStyle='rgba(42,92,63,0.10)'; ctx.fill();
+  }
+
+  // Boundary sides
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    const isClose=(i===n-1)&&n>=3;
+    const a=cvs[i],b=cvs[j];
+    ctx.beginPath(); ctx.moveTo(a.cx,a.cy); ctx.lineTo(b.cx,b.cy);
+    ctx.strokeStyle=isClose?'rgba(42,92,63,0.35)':'#3a7a55';
+    ctx.lineWidth=isClose?1.5:2.5;
+    ctx.setLineDash(isClose?[6,4]:[]);
+    ctx.stroke(); ctx.setLineDash([]);
+    const mx=(a.cx+b.cx)/2,my=(a.cy+b.cy)/2;
+    const ang=Math.atan2(b.cy-a.cy,b.cx-a.cx);
+    if(state.showLen){
+      const d=segLen(pts,i);
+      drawMidLabel(fmtLen(d),mx,my,ang,
+        isClose?'rgba(232,184,75,0.4)':'rgba(232,184,75,0.92)',
+        isClose?'#7a5a00':'#3a2a00',isClose?-16:0);
+    }
+    if(state.showNames){
+      const nm=ptName(i)+'→'+ptName(j);
+      ctx.save(); ctx.translate(mx,my); ctx.rotate(ang);
+      ctx.font='500 9.5px Syne,sans-serif';
+      ctx.fillStyle=isClose?'rgba(42,92,63,0.3)':'rgba(42,92,63,0.5)';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(nm,0,state.showLen?-18:-10);
+      ctx.restore();
+    }
+  }
+
+  // Diagonals
+  if(state.showDiag){
+    state.diagonals.forEach(d=>{
+      if(d.from>=n||d.to>=n) return;
+      const a=cvs[d.from],b=cvs[d.to];
+      ctx.beginPath(); ctx.moveTo(a.cx,a.cy); ctx.lineTo(b.cx,b.cy);
+      ctx.strokeStyle='rgba(74,125,232,0.7)'; ctx.lineWidth=2;
+      ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
+      if(state.showLen){
+        const dl=dist(pts[d.from],pts[d.to]);
+        const mx=(a.cx+b.cx)/2,my=(a.cy+b.cy)/2;
+        const ang=Math.atan2(b.cy-a.cy,b.cx-a.cx);
+        drawMidLabel(fmtLen(dl),mx,my,ang,'rgba(74,125,232,0.2)','#254a9a',0);
+      }
+    });
+  }
+
+  // Diagonal selection preview
+  if(state.mode==='diagonal'){
+    state.diagSel.forEach(idx=>{
+      const c=cvs[idx];
+      ctx.beginPath(); ctx.arc(c.cx,c.cy,PR+7,0,Math.PI*2);
+      ctx.strokeStyle='#4a7de8'; ctx.lineWidth=2.5; ctx.stroke();
+    });
+    if(state.diagSel.length===2){
+      const a=cvs[state.diagSel[0]],b=cvs[state.diagSel[1]];
+      ctx.beginPath(); ctx.moveTo(a.cx,a.cy); ctx.lineTo(b.cx,b.cy);
+      ctx.strokeStyle='#4a7de8'; ctx.lineWidth=2; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  // Vertex angles overlay
+  if(state.showAng&&n>=3){
+    pts.forEach((p,i)=>{
+      const a=vertAngle(pts,i).toFixed(1)+'°';
+      const {cx,cy}=cvs[i];
+      ctx.font='500 9.5px DM Mono,monospace';
+      const tw=ctx.measureText(a).width;
+      ctx.fillStyle='rgba(83,74,183,0.85)';
+      ctx.beginPath(); ctx.roundRect(cx+11,cy-12,tw+8,14,3); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.textBaseline='middle';
+      ctx.fillText(a,cx+15,cy-5);
+    });
+  }
+
+  // Points
+  cvs.forEach((cp,i)=>{
+    const sel=state.diagSel.includes(i);
+    ctx.beginPath(); ctx.arc(cp.cx,cp.cy,PR+4,0,Math.PI*2);
+    ctx.fillStyle=sel?'rgba(74,125,232,0.15)':'rgba(42,92,63,0.10)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cp.cx,cp.cy,PR,0,Math.PI*2);
+    ctx.fillStyle=sel?'#4a7de8':'#2a5c3f'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    ctx.font='700 11px Syne,sans-serif';
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ptName(i),cp.cx,cp.cy);
+  });
+}
+
+function drawMidLabel(text,mx,my,angle,bg,fg,yOff){
+  ctx.save(); ctx.translate(mx,my); ctx.rotate(angle);
+  ctx.font='600 10px DM Mono,monospace';
+  const tw=ctx.measureText(text).width;
+  ctx.fillStyle=bg; ctx.beginPath();
+  ctx.roundRect(-tw/2-5,(yOff||0)-9,tw+10,17,4); ctx.fill();
+  ctx.fillStyle=fg; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text,0,yOff||0); ctx.restore();
+}
+function drawAxes(W,H){
+  const o=toCv(0,0);
+  ctx.save(); ctx.strokeStyle='rgba(0,0,0,0.09)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(0,o.cy); ctx.lineTo(W,o.cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(o.cx,0); ctx.lineTo(o.cx,H); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+}
+function drawGrid(W,H){
+  const gs=state.scale;
+  ctx.save(); ctx.strokeStyle='rgba(42,92,63,0.07)'; ctx.lineWidth=1;
+  const sx=state.ox%gs; for(let x=sx;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  const sy=(H-state.oy)%gs; for(let y=sy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+}
+function drawPlaceholder(W,H){
+  ctx.save(); ctx.fillStyle='rgba(42,92,63,0.22)'; ctx.font='600 13px Syne,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Enter side lengths → click "Draw Land"',W/2,H/2); ctx.restore();
+}
+
+/* ── FIT VIEW ─────────────────────────────────────────────────── */
+function fitView(){
+  const pts=state.pts;
+  if(!pts||pts.length===0) return;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const rX=maxX-minX||10,rY=maxY-minY||10,pad=90;
+  const sc=Math.min(Math.max(Math.min((canvas.width-pad*2)/rX,(canvas.height-pad*2)/rY),3),400);
+  state.scale=sc; state.ox=pad-minX*sc; state.oy=pad-minY*sc;
+  document.getElementById('infoZoom').textContent=Math.round(sc*5)+'%';
+}
+
+/* ── HIT TESTING ──────────────────────────────────────────────── */
+function hitPt(cx,cy){
+  for(let i=state.pts.length-1;i>=0;i--){
+    const c=toCv(state.pts[i].x,state.pts[i].y);
+    if((c.cx-cx)**2+(c.cy-cy)**2<=HR**2) return i;
+  }
+  return -1;
+}
+function hitSeg(cx,cy){
+  const pts=state.pts,n=pts.length;
+  if(n<2) return -1;
+  const T=11;
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    const a=toCv(pts[i].x,pts[i].y),b=toCv(pts[j].x,pts[j].y);
+    if(ptSegDist(cx,cy,a.cx,a.cy,b.cx,b.cy)<T) return i;
+  }
+  return -1;
+}
+function ptSegDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;
+  if(!len2) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2));
+  return Math.hypot(px-ax-t*dx,py-ay-t*dy);
+}
+
+/* ── INTERACTION ──────────────────────────────────────────────── */
+function getPos(e){
+  const r=canvas.getBoundingClientRect();
+  if(e.touches) return{cx:e.touches[0].clientX-r.left,cy:e.touches[0].clientY-r.top};
+  return{cx:e.clientX-r.left,cy:e.clientY-r.top};
+}
+let downPos=null;
+
+canvas.addEventListener('mousedown',e=>{
+  const{cx,cy}=getPos(e); downPos={cx,cy};
+  if(state.mode==='normal'){
+    const h=hitPt(cx,cy);
+    if(h>=0){state.dragging=h;canvas.classList.add('dragging');}
+  }
+  if(state.mode==='diagonal'){
+    const h=hitPt(cx,cy);
+    if(h>=0) handleDiagPick(h);
+  }
+});
+
+canvas.addEventListener('mousemove',e=>{
+  const{cx,cy}=getPos(e);
+  if(state.dragging!==null){
+    const{x,y}=toMd(cx,cy); movePoint(state.dragging,x,y);
+  } else if(state.mode==='normal'){
+    const hP=hitPt(cx,cy),hS=hP<0?hitSeg(cx,cy):-1;
+    canvas.classList.toggle('can-drag',hP>=0);
+    canvas.classList.toggle('seg-hover',hP<0&&hS>=0);
+  }
+});
+
+canvas.addEventListener('mouseup',e=>{
+  const{cx,cy}=getPos(e);
+  const moved=downPos&&(Math.abs(cx-downPos.cx)>5||Math.abs(cy-downPos.cy)>5);
+  if(!moved&&state.mode==='normal'&&state.dragging===null){
+    if(hitPt(cx,cy)<0){const seg=hitSeg(cx,cy);if(seg>=0) splitSide(seg);}
+  }
+  if(!moved&&state.mode==='click'){
+    const{x,y}=toMd(cx,cy); addClickPoint(x,y);
+  }
+  state.dragging=null; canvas.classList.remove('dragging'); downPos=null;
+});
+
+canvas.addEventListener('mouseleave',()=>{state.dragging=null;canvas.classList.remove('dragging');});
+
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault(); const{cx,cy}=getPos(e);
+  if(state.mode==='normal'){const h=hitPt(cx,cy);if(h>=0){state.dragging=h;canvas.classList.add('dragging');}}
+  if(state.mode==='diagonal'){const h=hitPt(cx,cy);if(h>=0) handleDiagPick(h);}
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault(); if(state.dragging===null) return;
+  const{cx,cy}=getPos(e);const{x,y}=toMd(cx,cy); movePoint(state.dragging,x,y);
+},{passive:false});
+canvas.addEventListener('touchend',()=>{state.dragging=null;canvas.classList.remove('dragging');});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault(); const f=e.deltaY<0?1.1:0.9;
+  state.scale=Math.min(Math.max(state.scale*f,3),400);
+  document.getElementById('infoZoom').textContent=Math.round(state.scale*5)+'%';
+  drawCanvas();
+},{passive:false});
+
+/* ── CLICK-ADD ────────────────────────────────────────────────── */
+function addClickPoint(x,y){
+  for(const p of state.pts){
+    if(Math.abs(p.x-x)<0.3&&Math.abs(p.y-y)<0.3){showToast('Too close to existing point','warn');return;}
+  }
+  const n=state.sides.length;
+  if(n===0){
+    state.sides.push({length:'0',angle:'0'});
+    state.pts=[{x:0,y:0}];
+  } else {
+    const last=state.pts[n-1];
+    const dx=x-last.x,dy=y-last.y;
+    const len=Math.sqrt(dx*dx+dy*dy).toFixed(3);
+    let angle='0';
+    if(n>1) angle=calcTurnAngle(state.pts,n-2,n-1,{x,y});
+    state.sides.push({length:len,angle});
+    state.pts.push({x,y});
+  }
+  renderSidebar(); drawCanvas(); updateResults(); autoSave();
+}
+
+/* ── DIAGONAL PICK ────────────────────────────────────────────── */
+function handleDiagPick(idx){
+  const sel=state.diagSel;
+  const pos=sel.indexOf(idx);
+  if(pos>=0){sel.splice(pos,1);}
+  else{
+    sel.push(idx);
+    if(sel.length===2){
+      document.getElementById('diagFrom').value=Math.min(sel[0],sel[1]);
+      document.getElementById('diagTo').value=Math.max(sel[0],sel[1]);
+      addDiagonal();
+      state.diagSel=[];
+    }
+  }
+  drawCanvas();
+}
+
+/* ── MODE CONTROL ─────────────────────────────────────────────── */
+function setMode(m){
+  state.mode=m; state.diagSel=[];
+  ['modeNormal','modeDiag','modeClick'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  const map={normal:'modeNormal',diagonal:'modeDiag',click:'modeClick'};
+  document.getElementById(map[m]).classList.add('active');
+  document.getElementById('modePill').classList.toggle('show',m==='diagonal');
+  document.getElementById('modePillClick').classList.toggle('show',m==='click');
+  canvas.classList.toggle('diag-mode',m==='diagonal'||m==='click');
+  const hints={normal:'Drag a point to adjust • Click a segment line to insert a point there',
+    diagonal:'Click two points to add a diagonal measurement',click:'Click anywhere on canvas to add a new point'};
+  document.getElementById('chint').textContent=hints[m];
+  const modes={normal:'Draw',diagonal:'Diagonal',click:'Click-Add'};
+  document.getElementById('infoMode').textContent=modes[m];
+  drawCanvas();
+}
+
+/* ── MOVE POINT ───────────────────────────────────────────────── */
+function movePoint(idx,nx,ny){
+  const pts=state.pts,n=pts.length;
+  pts[idx]={x:nx,y:ny};
+  if(idx>0){const dx=nx-pts[idx-1].x,dy=ny-pts[idx-1].y;state.sides[idx-1].length=Math.sqrt(dx*dx+dy*dy).toFixed(3);}
+  if(idx<n-1){const dx=pts[idx+1].x-nx,dy=pts[idx+1].y-ny;state.sides[idx].length=Math.sqrt(dx*dx+dy*dy).toFixed(3);}
+  if(idx>0&&idx<n-1) state.sides[idx].angle=calcTurnAngle(pts,idx-1,idx,pts[idx+1]);
+  if(idx>1) state.sides[idx-1].angle=calcTurnAngle(pts,idx-2,idx-1,pts[idx]);
+  renderSidebar(); drawCanvas(); updateResults(); refreshAngles(); renderDiags();
+}
+
+function calcTurnAngle(pts,a,b,cArg){
+  const cPt=typeof cArg==='object'&&cArg.x!==undefined?cArg:pts[cArg];
+  const bPt=pts[b],aPt=pts[a];
+  const h1=Math.atan2(bPt.y-aPt.y,bPt.x-aPt.x)*180/Math.PI;
+  const h2=Math.atan2(cPt.y-bPt.y,cPt.x-bPt.x)*180/Math.PI;
+  let d=h2-h1; while(d>180) d-=360; while(d<-180) d+=360;
+  return d.toFixed(2);
+}
+
+/* ── AUTO-SAVE ────────────────────────────────────────────────── */
+let asTimer;
+function autoSave(){
+  clearTimeout(asTimer);
+  const dot=document.getElementById('asdot');
+  dot.className='asdot saving';
+  asTimer=setTimeout(()=>{
+    try{localStorage.setItem(AUTO_KEY,JSON.stringify(snap('__auto__')));}catch(e){}
+    dot.className='asdot saved';
+  },700);
+}
+
+function snap(name){
+  return{name,ts:Date.now(),
+    sides:state.sides.map(s=>({...s})),
+    diagonals:[...state.diagonals],
+    unit:state.unit,
+    kariPerInch:state.kariPerInch,
+    kariPerDhur:state.kariPerDhur,
+    dhurPerKatha:state.dhurPerKatha};
+}
+
+function loadSnap(s){
+  state.sides      =s.sides.map(x=>({...x}));
+  state.diagonals  =s.diagonals?[...s.diagonals]:[];
+  state.unit       =s.unit||'inch';
+  state.kariPerInch=s.kariPerInch||7.92;
+  state.kariPerDhur=s.kariPerDhur||20;
+  state.dhurPerKatha=s.dhurPerKatha||20;
+  document.getElementById('kariPerInch').value=state.kariPerInch;
+  document.getElementById('kariPerDhur').value=state.kariPerDhur;
+  document.getElementById('dhurPerKatha').value=state.dhurPerKatha;
+  document.getElementById('kariVal').textContent=state.kariPerInch;
+  document.getElementById('uInch').classList.toggle('active',state.unit==='inch');
+  document.getElementById('uKari').classList.toggle('active',state.unit==='kari');
+  buildPts(); renderSidebar(); fitView(); drawCanvas(); updateResults(); renderDiags();
+}
+
+/* ── PROJECTS ─────────────────────────────────────────────────── */
+function getProjects(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');}catch(e){return{};}}
+
+function renderProjects(){
+  const data=getProjects(),list=document.getElementById('savedList');
+  list.innerHTML='';
+  const keys=Object.keys(data);
+  if(!keys.length){list.innerHTML='<div style="font-size:10px;color:var(--muted);padding:3px 0">No saved projects.</div>';return;}
+  keys.sort((a,b)=>(data[b].ts||0)-(data[a].ts||0)).forEach(k=>{
+    const d=data[k],ts=d.ts?new Date(d.ts).toLocaleDateString():'';
+    const item=document.createElement('div'); item.className='saved-item';
+    item.innerHTML=`<span class="sname">${k}</span><span class="sdate">${ts}</span>
+      <div class="sia"><button class="lb">Load</button><button class="db">Del</button></div>`;
+    item.querySelector('.lb').onclick=()=>loadProject(k);
+    item.querySelector('.db').onclick=()=>openDelModal(k);
+    list.appendChild(item);
+  });
+}
+
+document.getElementById('btnSave').addEventListener('click',()=>{
+  const n=document.getElementById('saveName').value.trim();
+  if(!n){showToast('Enter a project name','warn');return;}
+  if(state.sides.length<MIN){showToast('Need at least '+MIN+' points','warn');return;}
+  const data=getProjects(); data[n]=snap(n);
+  localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  document.getElementById('saveName').value='';
+  renderProjects(); showToast('"'+n+'" saved!','ok');
+});
+
+function loadProject(name){
+  const d=getProjects(); if(!d[name]) return;
+  loadSnap(d[name]); showToast('"'+name+'" loaded!','ok');
+}
+
+/* ── SECURE DELETE ────────────────────────────────────────────── */
+let pendingDel=null;
+function openDelModal(name){
+  pendingDel=name;
+  document.getElementById('delName').textContent=name;
+  document.getElementById('pcInput').value='';
+  document.getElementById('pcErr').textContent='';
+  document.getElementById('delOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('pcInput').focus(),80);
+}
+function closeDelModal(){document.getElementById('delOverlay').classList.remove('open');pendingDel=null;}
+function confirmDel(){
+  if(document.getElementById('pcInput').value!==PASSCODE){
+    document.getElementById('pcErr').textContent='❌ Wrong passcode.';
+    document.getElementById('pcInput').value=''; return;
+  }
+  const d=getProjects(); delete d[pendingDel];
+  localStorage.setItem(SAVE_KEY,JSON.stringify(d));
+  closeDelModal(); renderProjects(); showToast('Deleted.','ok');
+}
+document.getElementById('pcInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter') confirmDel();
+  if(e.key==='Escape') closeDelModal();
+});
+document.getElementById('delOverlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('delOverlay')) closeDelModal();
+});
+
+/* ── BUTTONS ──────────────────────────────────────────────────── */
+document.getElementById('btnAddSide').addEventListener('click',()=>addSide(undefined,'','0'));
+
+document.getElementById('btnDraw').addEventListener('click',()=>{
+  buildPts(); fitView(); drawCanvas(); updateResults();
+  showToast('Land drawn! Drag points or click a line to insert.','ok');
+});
+
+document.getElementById('btnCalc').addEventListener('click',()=>{
+  buildPts(); updateResults(); drawCanvas();
+  showToast('Area calculated.','ok');
+});
+
+document.getElementById('btnReset').addEventListener('click',()=>{
+  state.sides=[{length:'20',angle:'0'},{length:'15',angle:'90'},{length:'20',angle:'90'},{length:'15',angle:'90'}];
+  state.diagonals=[];
+  buildPts(); renderSidebar(); fitView(); drawCanvas(); updateResults(); renderDiags();
+  showToast('Reset to default 20×15 rectangle.');
+});
+
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const a=document.createElement('a');
+  a.download='land-plot.png'; a.href=canvas.toDataURL('image/png'); a.click();
+  showToast('Exported as PNG!','ok');
+});
+
+document.getElementById('btnZoomIn').addEventListener('click',()=>{
+  state.scale=Math.min(state.scale*1.25,400);
+  document.getElementById('infoZoom').textContent=Math.round(state.scale*5)+'%'; drawCanvas();
+});
+document.getElementById('btnZoomOut').addEventListener('click',()=>{
+  state.scale=Math.max(state.scale/1.25,3);
+  document.getElementById('infoZoom').textContent=Math.round(state.scale*5)+'%'; drawCanvas();
+});
+document.getElementById('btnFit').addEventListener('click',()=>{fitView();drawCanvas();});
+
+function setupToggle(id,key){
+  const b=document.getElementById(id);
+  b.addEventListener('click',()=>{state[key]=!state[key];b.classList.toggle('on',state[key]);drawCanvas();});
+}
+setupToggle('togLen','showLen');
+setupToggle('togNames','showNames');
+setupToggle('togAng','showAng');
+setupToggle('togDiag','showDiag');
+setupToggle('togGrid','showGrid');
+setupToggle('togFill','showFill');
+
+/* ── TOAST ────────────────────────────────────────────────────── */
+let toastT;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(type?' '+type:'');
+  t.classList.add('show'); clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ── INIT ─────────────────────────────────────────────────────── */
+function init(){
+  const saved=localStorage.getItem(AUTO_KEY);
+  if(saved){
+    try{
+      const s=JSON.parse(saved);
+      if(s.sides&&s.sides.length>=MIN){
+        resizeCanvas(); loadSnap(s); renderProjects();
+        showToast('Session restored.','ok'); return;
+      }
+    }catch(e){}
+  }
+  state.sides=[
+    {length:'20',angle:'0'},{length:'15',angle:'90'},
+    {length:'20',angle:'90'},{length:'15',angle:'90'},
+  ];
+  resizeCanvas(); buildPts(); renderSidebar(); fitView();
+  drawCanvas(); updateResults(); renderProjects(); refreshDiagSelects();
+}
+
+window.addEventListener('resize',resizeCanvas);
+init();
+</script>
+</body>
+</html>
